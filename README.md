@@ -1,5 +1,5 @@
 # The_Danish_Witch_Hunt
-**about project**
+**About project**
 
 How can digital methods provide us with geographical insight into the agency of Danes accused of witchcraft? This project examines Danish witch trails from 1300-1800 with a focus on geographical and gender aspects. 
 
@@ -13,7 +13,7 @@ Packages: tidyverse, here, leaflet, tmap, ggplot2, gganimate, terra, tidyterra, 
 
 Download Rmd-file and place in a folder. Download csv-file from data and place it in a data folder within your Rmd folder. 
 
-**meta-data**
+**Meta-data**
 
 Mapping_of_Danish_witch_hunts.rmd = R markdown file created in RStudio. A script to recreate both static map and animated map of danish witch accusations. 
 
@@ -25,6 +25,6 @@ original = used to describe the closest we get to depiction of the original loca
 
 GODWIT = original database the csv was made from: https://www.godwit.sdu.dk/datasets/denmark
 
-**license**
+**License**
 
 This project is licensed under the Creative Commons Attribution-ShareAlike 4.0 International (CC BY-SA 4.0) license.

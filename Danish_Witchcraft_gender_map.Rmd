@@ -1,0 +1,277 @@
+---
+title: "Danish_Witchcraft_gender_map.rmd"
+author: "Anya Quinn"
+date: "2026-08-16"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+``` {r}
+library (tidyverse)
+```
+
+```{r}
+df <- read.csv("/Users/anyaquinn/Desktop/GODWIT/data/GODWIT_dataset_geocoded.csv")
+```
+``` {r} 
+Witchcraft_geocoding <- read.csv("/Users/anyaquinn/Desktop/GODWIT/data/GODWIT_dataset_geocoded.csv")
+```
+``` {r}
+install.packages ("leaflet")
+```
+``` {r}
+library(leaflet)
+library (tmap)
+library (ggplot2)
+```
+
+``` {r}
+leaflet() %>%
+  addTiles() %>% 
+  addMarkers (lng=13.583300,lat=55.98330)
+```
+
+  
+```{r}
+library(readr)
+data <- Witchcraft_geocoding
+```
+``` {r}
+leaflet(data) %>%
+  addTiles(
+urlTemplate = "https://server.arcgisonline.com/ArcGIS/rest/services/NatGeo_World_Map/MapServer/tile/{z}/{y}/{x}",
+ attribution = "© Esri, National Geographic, DeLorme, NAVTEQ, UNEP-WCMC, USGS, NASA, ESA, METI, NRCAN, GEBCO, NOAA, iPC"
+) |>
+addMarkers(lng = ~longitude, lat = ~latitude)
+``` 
+
+``` {r}
+library(leaflet)
+library(readr)
+library(htmltools)
+
+leaflet(data) %>%
+  addTiles(
+urlTemplate = "https://server.arcgisonline.com/ArcGIS/rest/services/NatGeo_World_Map/MapServer/tile/{z}/{y}/{x}",
+ attribution = "© Esri, National Geographic, DeLorme, NAVTEQ, UNEP-WCMC, USGS, NASA, ESA, METI, NRCAN, GEBCO, NOAA, iPC"
+) |>
+  setView(lng = 10.5, lat = 56.0, zoom = 7) %>% 
+  addCircleMarkers(
+    lng = ~longitude,
+    lat = ~latitude,
+    radius = 5,
+    color = "darkred",
+    stroke = FALSE,
+    fillOpacity = 0.7,
+    label = ~lapply(paste0(
+      "<b>", Name_of_Accused, "</b><br>",
+      Date_of_Accusation, " — ", Location_of_Case
+    ), HTML),
+    popup = ~paste0(
+      "<b>", Name_of_Accused, "</b><br>",
+      "<b>Date:</b> ", Date_of_Accusation, "<br>",
+      "<b>Gender:</b> ", Gender, "<br>",
+      "<b>Location:</b> ", Location_of_Case, "<br>",
+      "<b>Charge:</b> ", Charge, "<br>",
+      "<b>Result:</b> ", Result_of_Case
+    )
+  )
+```
+```{r}
+library (leaflet)
+library (readr)
+library (htmltools)
+
+data <- Witchcraft_geocoding
+  data$Gender <- factor(data$Gender, levels = c("Female", "Male", "Unknown"))
+  pal <- colorFactor(
+  palette = c("firebrick", "steelblue", "gray"),  # now matches levels() order exactly
+  domain = data$Gender
+)
+```
+
+``` {r} 
+leaflet(data) %>%
+  addTiles(
+urlTemplate = "https://server.arcgisonline.com/ArcGIS/rest/services/NatGeo_World_Map/MapServer/tile/{z}/{y}/{x}",
+ attribution = "© Esri, National Geographic, DeLorme, NAVTEQ, UNEP-WCMC, USGS, NASA, ESA, METI, NRCAN, GEBCO, NOAA, iPC"
+) |>
+  setView(lng = 10.5, lat = 56.0, zoom = 7) %>%
+  addCircleMarkers(
+    lng = ~longitude,
+    lat = ~latitude,
+    radius = 5,
+    color = ~pal(Gender),
+    stroke = FALSE,
+    fillOpacity = 0.8,
+    label = ~lapply(paste0("<b>", Name_of_Accused, "</b><br>", Date_of_Accusation), HTML),
+    popup = ~paste0(
+      "<b>", Name_of_Accused, "</b><br>",
+      "Date: ", Date_of_Accusation, "<br>",
+      "Gender: ", Gender, "<br>",
+      "Location: ", Location_of_Case, "<br>",
+      "Charge: ", Charge, "<br>",
+      "Result: ", Result_of_Case
+    )
+  ) %>%
+addLegend(
+    pal = pal,
+    values = ~Gender,
+    title = "Gender",
+    position = "bottomright"
+  )
+``` 
+
+``` {r}
+library(leaflet)
+library(dplyr)
+
+# collapse all 1590 København people into one row
+cph_1590_summary <- cph_1590 %>%
+  summarise(
+    latitude = first(latitude),
+    longitude = first(longitude),
+    n_people = n(),
+    names_list = paste(Name_of_Accused, collapse = "<br>")
+  )
+
+leaflet(cph_1590_summary) %>%
+  addTiles() %>%
+  addMarkers(
+    lng = ~longitude, lat = ~latitude,
+    popup = ~paste0("<b>København, 1590 — ", n_people, " accused</b><br><br>", names_list)
+  )
+
+cph_1590_summary <- cph_1590 %>%
+  summarise(
+    latitude = first(latitude),
+    longitude = first(longitude),
+    n_people = n(),
+    names_list = paste0(Name_of_Accused, " — ", Result_of_Case, collapse = "<br>")
+  )
+```
+``` {r}
+leaflet(cph_1590_summary) %>%
+  addTiles() %>%
+  addMarkers(
+    lng = ~longitude, lat = ~latitude,
+    label = ~paste0(n_people, " accused (1590)"),   # shows on hover
+    labelOptions = labelOptions(noHide = TRUE),      # always visible, not just on hover
+    popup = ~paste0("<b>Names:</b><br>", names_list)  # full list on click
+  )
+```
+
+``` {r}
+library(leaflet)
+library(dplyr)
+
+# 1. define Gender factor + palette FIRST, before building the map
+df$Gender <- factor(df$Gender, levels = c("Female", "Male", "Unknown"))
+
+pal <- colorFactor(
+  palette = c("firebrick", "steelblue", "gray"),
+  domain = df$Gender
+)
+
+df_rest <- df %>%
+  filter(!(Date_of_Accusation == 1590 & grepl("benhavn", Location_of_Case)))
+
+cph_1590_summary <- df %>%
+  filter(Date_of_Accusation == 1590, grepl("benhavn", Location_of_Case)) %>%
+  summarise(
+    latitude = first(latitude),
+    longitude = first(longitude),
+    n_people = n(),
+    names_list = paste0(Name_of_Accused, " — ", Result_of_Case, collapse = "<br>")
+  )
+
+leaflet(df) %>%
+  addTiles(
+    urlTemplate = "https://server.arcgisonline.com/ArcGIS/rest/services/NatGeo_World_Map/MapServer/tile/{z}/{y}/{x}",
+    attribution = "© Esri, National Geographic, DeLorme, NAVTEQ, UNEP-WCMC, USGS, NASA, ESA, METI, NRCAN, GEBCO, NOAA, iPC"
+  ) %>%
+  setView(lng = 10.5, lat = 56.0, zoom = 7) %>%
+  addCircleMarkers(
+    data = df_rest,
+    lng = ~longitude, lat = ~latitude,
+    radius = 5,
+    color = ~pal(Gender),      # <-- this was missing; now actually colors by gender
+    fillOpacity = 0.7,
+    popup = ~paste0("<b>", Name_of_Accused, "</b><br>",
+                     Date_of_Accusation, " — ", Location_of_Case, "<br>",
+                     Result_of_Case)
+  ) %>%
+  addMarkers(
+    data = cph_1590_summary,
+    lng = ~longitude, lat = ~latitude,
+    popup = ~paste0(
+      "<div style='max-height:200px; overflow-y:auto;'>",
+      "<b>København, 1590 — ", n_people, " accused</b><br><br>",
+      names_list,
+      "</div>"
+    )
+  ) %>%
+  addLegend(
+    pal = pal,
+    values = df$Gender,
+    title = "Gender",
+    position = "bottomright"
+  )
+```
+``` {r}
+library(dplyr)
+
+male_clusters <- df %>%
+  filter(Gender == "Male") %>%
+  count(Location_of_Case, latitude, longitude, name = "n_men") %>%
+  arrange(desc(n_men))
+
+head(male_clusters, 10)   
+```
+```{r}
+library(leaflet)
+library(dplyr)
+
+leaflet(df) %>%
+  addTiles(
+    urlTemplate = "https://server.arcgisonline.com/ArcGIS/rest/services/NatGeo_World_Map/MapServer/tile/{z}/{y}/{x}",
+    attribution = "© Esri, National Geographic, DeLorme, NAVTEQ, UNEP-WCMC, USGS, NASA, ESA, METI, NRCAN, GEBCO, NOAA, iPC"
+  ) %>%
+  setView(lng = 10.5, lat = 56.0, zoom = 7) %>%
+  addCircleMarkers(
+    lng = ~longitude, lat = ~latitude,
+    radius = 5,
+    color = ~pal(Gender),
+    fillOpacity = 0.7,
+    clusterOptions = markerClusterOptions(),   # <-- this is the fix
+    popup = ~paste0("<b>", Name_of_Accused, "</b><br>",
+                     Date_of_Accusation, " — ", Location_of_Case, "<br>",
+                     Result_of_Case)
+  ) %>%
+  addLegend(pal = pal, values = df$Gender, title = "Gender", position = "bottomright")
+```
+``` {r}
+library(dplyr)
+
+male_by_year <- df %>%
+  filter(Gender == "Male") %>%
+  count(Date_of_Accusation, name = "n_men") %>%
+  arrange(desc(n_men))
+
+head(male_by_year, 10)
+```
+``` {r}
+library(dplyr)
+
+female_by_year <- df %>%
+  filter(Gender == "Female") %>%
+  count(Date_of_Accusation, name = "n_women") %>%
+  arrange(desc(n_women))
+
+head(female_by_year, 10)
+
+```

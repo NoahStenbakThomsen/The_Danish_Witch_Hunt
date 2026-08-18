@@ -1,0 +1,202 @@
+---
+title: "Mapping_of_Danish_Witch_Hunt"
+author: "Noah"
+date: "2026-08-16"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+````{r}
+install.packages("tidyverse")
+install.packages("here")
+install.packages("ggplot2")
+install.packages("gganimate")
+install.packages("terra")
+install.packages("tidyterra")
+install.packages("rnaturalearth")
+install.packages("rnaturalearthdata")
+install.packages("gifski")
+library(tidyverse)
+library(here)
+library(ggplot2)
+library(gganimate)
+library(terra)
+library(tidyterra)
+library(rnaturalearth)
+library(rnaturalearthdata)
+library(gifski)
+````
+
+````{r}
+
+godwit <- read_csv(here("data", "GODWIT_dataset_geocoded.csv"))
+
+````
+
+
+
+````{r}
+#create year column
+godwit <- godwit %>%
+  mutate(
+    year = str_extract(Date_of_Accusation, "\\d{4}") %>% as.integer()
+  )
+
+````
+
+
+````{r}
+#remove NULL values
+map_data <- godwit %>%
+  filter(!is.na(latitude), !is.na(longitude), !is.na(year)) %>%
+  arrange(year)
+````
+
+
+````{r}
+
+suspect_years <- godwit %>%
+  filter(!is.na(year), (year < 1300 | year > 1820)) %>%
+  select(Date_of_Accusation, year)
+ 
+if (nrow(suspect_years) > 0) {
+  message("Found ", nrow(suspect_years), " row(s) with an implausible year — check these in the source CSV:")
+  print(suspect_years)
+}
+
+````
+
+
+
+
+````{r}
+
+countries_sf <- ne_countries(scale = "medium",
+                              country = c("Denmark", "Sweden", "Germany"),
+                              returnclass = "sf")
+
+````
+
+
+````{r}
+bbox <- c(xmin = 6.5, xmax = 16.5, ymin = 53.8, ymax = 58.8)
+
+countries_v <- vect(countries_sf) %>%
+  crop(ext(bbox["xmin"], bbox["xmax"], bbox["ymin"], bbox["ymax"]))
+
+````
+
+
+````{r}
+stretch <- 5  
+
+map_data <- map_data %>%
+  mutate(
+    time_index = case_when(
+      year <  1500                 ~ year - 1500,
+      year >= 1500 & year <= 1700  ~ (year - 1500) * stretch,
+      year >  1700                 ~ (1700 - 1500) * stretch + (year - 1700)
+    )
+  )
+
+
+cat("Total rows in CSV:              ", nrow(godwit), "\n")
+cat("Rows missing lat/lon:           ", sum(is.na(godwit$latitude) | is.na(godwit$longitude)), "\n")
+cat("Rows where no year was found:   ", sum(is.na(godwit$year)), "\n")
+cat("Rows with an implausible year:  ", nrow(suspect_years), "\n")
+cat("Rows actually plotted:          ", nrow(map_data), "\n")
+cat("Coverage:                       ", round(100 * nrow(map_data) / nrow(godwit), 1), "%\n")
+````
+
+````{r}
+#create static map
+static_map <- ggplot() +
+  geom_spatvector(data = countries_v, fill = "#f2ede4", color = "#8c8c8c", linewidth = 0.3) +
+  geom_point(
+    data = map_data,
+    aes(x = longitude, y = latitude, color = geo_precision),
+    alpha = 0.75, size = 2
+  ) +
+  coord_sf(xlim = c(bbox["xmin"], bbox["xmax"]), ylim = c(bbox["ymin"], bbox["ymax"])) +
+  scale_color_manual(
+    values = c(original = "#7a1f1f", town = "#c0392b", herred = "#e08283", region = "#e6b8b8"),
+    name = "Location precision"
+  ) +
+  labs(
+    title = "Witchcraft accusations in Denmark",
+    subtitle = "All recorded cases",
+    x = NULL, y = NULL
+  ) +
+  theme_minimal(base_family = "sans") +
+  theme(
+    panel.grid = element_blank(),
+    axis.text = element_blank(),
+    axis.ticks = element_blank(),
+    plot.title = element_text(face = "bold", size = 16),
+    plot.subtitle = element_text(
+  size = 24,
+  color = "#7a1f1f",
+  face = "bold"
+),
+    legend.position = "bottom"
+  )
+
+print(static_map)
+
+
+````
+
+
+````{r}
+#animated map
+
+anim_map <- static_map +
+  labs(
+  subtitle = "Year: {round(ifelse(
+    frame_time < 0,
+    frame_time + 1500,
+    ifelse(
+      frame_time <= 1000,
+      frame_time / 5 + 1500,
+      frame_time + 700
+    )
+  ))}"
+) +
+  transition_time(time_index) +
+  enter_fade() + enter_grow() +
+  exit_fade() + exit_shrink() +
+  shadow_wake(wake_length = 0.08, alpha = TRUE, size = TRUE) +
+  ease_aes("cubic-in-out")
+
+n_years <- diff(range(map_data$year))
+ 
+animated <- gganimate::animate(
+  anim_map,
+  nframes = 500,
+  fps = 15,
+  width = 900, height = 900, res = 150,
+  end_pause = 20,
+ renderer = gganimate::gifski_renderer(loop = TRUE)
+)
+
+print(animated)
+
+````
+
+
+
+````{r}
+
+anim_save(here("data", "godwit_accusations_animated.gif"), animation = animated)
+
+
+````
+
+
+
+
+
+

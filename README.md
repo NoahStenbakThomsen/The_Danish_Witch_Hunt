@@ -11,7 +11,9 @@ Download Rmd-file and place in a folder. Download csv-file from data and place i
 
 **meta-data**
 Mapping_of_Danish_witch_hunts.rmd = R markdown file created in RStudio. A script to recreate both static map and animated map of danish witch accusations. 
+
 Plots_and_Chards.rmd = R markdown file created in RStudio. A script to recreate graph interpretations of the data.
+
 gender_map.rmd = R markdown file created in RStudio. A script to recreate map of male, female, and unknown accused of witchcraft in Denmark
 
 original = used to describe the closest we get to depiction of the original location of a witch accusation
